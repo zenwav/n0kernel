@@ -138,7 +138,7 @@ jobs:
         name=n0kernel-${{ fromJSON('["", "-KSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
-        mv $name out/arch/arm64/boot/
+        mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
         echo "zipname=$name" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: anykernel
