@@ -134,7 +134,7 @@ jobs:
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
           test -f out/arch/arm64/boot/dtb && cp -v out/arch/arm64/boot/dtb AnyKernel3/
         fi
-        name=n0kernel-${{ fromJSON('["", "-KSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}.zip
+        name=n0kernel-${{ fromJSON('["", "KSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
         mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
