@@ -1,0 +1,37 @@
+# A simple action usage
+name: Build Kernel
+on:
+  workflow_dispatch:
+
+jobs:
+  Build-Kernel:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - name: Build Kernel
+      uses: averagePedestrian/kernel_build_action@n0kernel
+      with:
+          kernel-url: https://github.com/averagePedestrian/n0kernel
+          kernel-dir: n0kernel
+          kernel-branch: staging
+          config: alioth_defconfig
+          arch: arm64
+          aosp-gcc: true
+          aosp-clang: false
+          android-ndk: false
+          other-clang-url: https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/10032024/neutron-clang-10032024.tar.zst
+          extra-cmd: LLVM=1
+          ksu: true
+          ksu-version: legacy
+          ksu-other: true
+          ksu-url: https://github.com/backslashxx/KernelSU
+          android-version: 14
+          aosp-clang-version: r530567
+          anykernel3: true
+          anykernel3-url: https://github.com/averagePedestrian/AnyKernel3
+          release: true
+          access-token: ${{ secrets.ACCESS_TOKEN }}
