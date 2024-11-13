@@ -95,10 +95,7 @@ jobs:
       if: ${{ steps.workspace.outputs.kernelsu == 'Yes' }}
       run: |
         if [ -d "KernelSU" ]; then
-          rm -rf "KernelSU"
-        fi
-        if [ -d "drivers/kernelsu" ]; then
-          rm -rf "drivers/kernelsu"
+          curl -LSs "https://gist.githubusercontent.com/averagePedestrian/453b70ad72e51e669a7b03ac799c32ca/raw/962b9181f3ebe5e9f52470b1c6c37e5542cd7518/setup.sh" | bash -s -- --cleanup
         fi
         curl -LSs "https://gist.githubusercontent.com/averagePedestrian/453b70ad72e51e669a7b03ac799c32ca/raw/962b9181f3ebe5e9f52470b1c6c37e5542cd7518/setup.sh" | bash -s legacy
         sed -i 's/depends on OVERLAY_FS/select OVERLAY_FS/' KernelSU/kernel/Kconfig
@@ -121,23 +118,29 @@ jobs:
       if: ${{ success() && github.event.inputs.ANYKERNEL_URL != '' }}
       continue-on-error: true
       run: |
-        if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
-          anykernel_branch=${{ github.event.inputs.CODENAME }}
-        else
-          anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+
+        if [ ! -d "AnyKernel3" ]; then
+          if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
+            anykernel_branch=${{ github.event.inputs.CODENAME }}
+          else
+            anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+          fi
+          git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
         fi
-        git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
-        if [ -e "Image.gz-dtb" ]; then
-          cp -f Image.gz-dtb AnyKernel3
-        elif [ -e "Image.gz" ]; then
-          cp -f Image.gz AnyKernel3
+        if [ -f out/arch/arm64/boot/Image.gz ]; then
+          cp -f out/arch/arm64/boot/Image.gz AnyKernel3/ -rv
+          test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
+          test -f out/arch/arm64/boot/dtb && cp -v out/arch/arm64/boot/dtb AnyKernel3/
+        elif [ -f out/arch/${{ inputs.arch }}/boot/Image.gz-dtb]; then
+          cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3
         fi
-        name=FlashableKernel-${{ github.event.inputs.CODENAME }}${{ fromJSON('["", "-KSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}.zip
+
+        name=n0kernel-${{ fromJSON('["", "-KSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}.zip
         cd AnyKernel3
-        zip -q -r $name *
-        mv $name ../
+        zip -r9 $name * -x README $name
+        mv $name /out/arch/arm64/boot/
         echo "zipname=$name" >> $GITHUB_OUTPUT
-      working-directory: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: anykernel
 
     - name: Check the output directory before uploading
