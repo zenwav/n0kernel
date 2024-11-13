@@ -1,0 +1,35 @@
+# A simple action usage
+name: Build Kernel
+on:
+  workflow_dispatch:
+
+jobs:
+  Build-Kernel:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - name: Build Kernel
+      uses: averagePedestrian/kernel_build_action@n0kernel
+      with:
+          kernel-url: https://github.com/averagePedestrian/n0kernel
+          kernel-dir: InfiniR_kernel_alioth
+          kernel-branch: ksu-legacy
+          config: alioth_defconfig
+          arch: arm64
+          aosp-gcc: true
+          aosp-clang: true
+          extra-cmd: LLVM=1
+          ksu: true
+          ksu-version: legacy
+          ksu-other: true
+          ksu-url: https://github.com/backslashxx/KernelSU
+          android-version: 15
+          aosp-clang-version: r522817
+          anykernel3: true
+          anykernel3-url: https://github.com/averagePedestrian/AnyKernel3
+          release: true
+          access-token: ${{ secrets.ACCESS_TOKEN }}
