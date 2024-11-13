@@ -101,6 +101,7 @@ jobs:
           rm -rf "drivers/kernelsu"
         fi
         curl -LSs "https://gist.githubusercontent.com/averagePedestrian/453b70ad72e51e669a7b03ac799c32ca/raw/962b9181f3ebe5e9f52470b1c6c37e5542cd7518/setup.sh" | bash -s legacy
+        sed -i 's/depends on OVERLAY_FS/select OVERLAY_FS/' KernelSU/kernel/Kconfig
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
 
     - name: Building kernel
