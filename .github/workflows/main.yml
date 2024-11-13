@@ -21,9 +21,8 @@ jobs:
           config: alioth_defconfig
           arch: arm64
           aosp-gcc: true
-          aosp-clang: false
+          aosp-clang: true
           android-ndk: false
-          other-clang-url: https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/05012024/neutron-clang-05012024.tar.zst
           extra-cmd: LLVM=1
           ksu: true
           ksu-version: legacy
