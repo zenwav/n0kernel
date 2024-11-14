@@ -22,7 +22,7 @@ jobs:
           arch: arm64
           aosp-gcc: true
           aosp-clang: true
-          extra-cmd: LLVM=1
+          extra-cmd: LLVM=1 LLVM_IAS=1
           ksu: true
           ksu-version: legacy
           ksu-other: true
