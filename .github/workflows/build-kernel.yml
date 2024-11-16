@@ -20,8 +20,10 @@ jobs:
           kernel-branch: staging
           config: alioth_defconfig
           arch: arm64
-          aosp-gcc: true
-          aosp-clang: true
+          aosp-gcc: false
+          aosp-clang: false
+          android-ndk: false
+          neutron-clang: true
           extra-cmd: LLVM=1 LLVM_IAS=1
           ksu: true
           ksu-version: legacy
