@@ -74,12 +74,12 @@ jobs:
 
     - name: Prepare the build environment
       run: |
-        sudo apt-get install flex libncurses5
-        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 -b android-msm-redbull-4.19-android14 --depth=1
-        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 -b android-msm-redbull-4.19-android14 --depth=1
-        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O clang.tar.gz
-        mkdir clang
-        tar -xf clang.tar.gz -C clang
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y binutils git make bc bison openssl curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev libc6-dev device-tree-compiler ca-certificates python3 xz-utils libc6-dev aria2 build-essential ccache libncurses5
+        mkdir neutron-clang
+        cd neutron-clang
+        bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") --patch=glibc
+        cd ..
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
       id: tools
@@ -103,12 +103,12 @@ jobs:
     - name: Building kernel
       run: |
         git submodule init && git submodule update
+        export PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH"
         export ARCH=arm64
-        export SUBARCH=ARM64
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="Github Actions"
-        make O=out vendor/alioth_defconfig PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
-        make O=out CC=clang -j$(nproc --all) PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:${{ steps.tools.outputs.tools-folder }}/aarch64-linux-android-4.9/bin:${{ steps.tools.outputs.tools-folder }}/arm-linux-androideabi-4.9/bin:$PATH" CROSS_COMPILE=${{ steps.tools.outputs.tools-folder }}/aarch64-linux-android-4.9/bin/aarch64-linux-android- CROSS_COMPILE_ARM32=${{ steps.tools.outputs.tools-folder }}/arm-linux-androideabi-4.9/bin/arm-linux-androideabi- CLANG_TRIPLE=aarch64-linux-gnu- LLVM=1 LLVM_IAS=1
+        make O=out vendor/alioth_defconfig
+        PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: build
