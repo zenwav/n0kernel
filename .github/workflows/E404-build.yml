@@ -1,0 +1,256 @@
+name: E404 build with clang-r536225
+
+on:
+  workflow_dispatch:
+    inputs:
+      BUILD_TITLE:
+        description: 'Custom Build Title'
+        required: false
+      KERNEL_TREE:
+        description: 'Kernel Tree'
+        default: 'https://github.com/averagePedestrian/n0kernel'
+        required: true
+      KERNEL_TREE_BRANCH:
+        description: 'Kernel Tree Branch'
+        required: true
+        default: 'E404'
+      CODENAME:
+        description: 'Phone Codename'
+        default: 'alioth'
+        required: true
+      ANYKERNEL_URL:
+        description: 'AnyKernel Url (leave blank if you dont want AnyKernel)'
+        default: 'https://github.com/itisFarzin-Phone/AnyKernel3'
+        required: false
+      ANYKERNEL_BRANCH:
+        description: 'AnyKernel Branch (defaults to codename)'
+        default: 'alioth'
+        required: false
+      CLANG_GIT_LINK:
+        description: 'Clang Git URL'
+        default: 'https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225'
+        required: false
+      CCACHE:
+        description: 'Enable Ccache for compiling kernel'
+        required: false
+        default: false
+      ENABLE_KERNELSU:
+        description: 'KernelSU'
+        type: boolean
+        default: true
+      UPLOAD_TO_RELEASE:
+        description: 'Upload to release'
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    if: github.event.repository.owner.id == github.event.sender.id
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+    
+    - name: Display User Inputs
+      run: |
+        echo "::group::User Environment Variables"
+        echo "Custom Build Title: ${{ github.event.inputs.BUILD_TITLE }}"
+        echo "Kernel Tree: ${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }}"
+        echo "Codename: ${{ github.event.inputs.CODENAME }}"
+        echo "AnyKernel Url: ${{ github.event.inputs.ANYKERNEL_URL }}/tree/${{ github.event.inputs.ANYKERNEL_BRANCH }}"
+        echo "KernelSU: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}
+        echo "CCACHE: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.CCACHE)] }}
+        echo "::endgroup::"
+    - name: Initialize workspace
+      run: |
+        mkdir workspace
+        cd workspace
+        echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
+        echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+        echo "kernelsu=${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}" >> $GITHUB_OUTPUT
+        echo "build_title=${{ github.event.inputs.BUILD_TITLE || github.event.inputs.CODENAME }}" >> $GITHUB_OUTPUT
+      id: workspace
+
+    - name: Setup ccache
+      if: ${{ github.event.inputs.CCACHE == 'true' }}
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ inputs.config }}-0cb68f9cbcbb3de9c966cf66ed51471fbe51419e
+        max-size: 4G
+
+    - name: Prepare the build environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev libc6-dev device-tree-compiler ca-certificates python3 xz-utils libc6-dev aria2 build-essential ccache libncurses5
+        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O clang.tar.gz
+        mkdir clang
+        tar -xf clang.tar.gz -C clang
+        echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.workspace.outputs.workspace-folder }}
+      id: tools
+
+    - name: Clone kernel source
+      run: |
+        git clone --depth=1 ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} kernel_tree
+        echo "kernel-folder=$(pwd)/kernel_tree" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.workspace.outputs.workspace-folder }}
+      id: kernel
+
+    - name: Adding KernelSU
+      if: ${{ steps.workspace.outputs.kernelsu == 'Yes' }}
+      run: |
+        if [ -d "KernelSU" ]; then
+          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s -- --cleanup
+        fi
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+
+    - name: Building kernel
+      run: |
+        git submodule init && git submodule update
+        export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export KBUILD_BUILD_USER="nehal"
+        export KBUILD_BUILD_HOST="Github Actions"
+        make O=out vendor/alioth_defconfig
+        PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+      id: build
+
+    - name: Normal CPUFreq
+      run: |
+        TARGET=alioth
+        if [ ! -d "AnyKernel3" ]; then
+          if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
+            anykernel_branch=${{ github.event.inputs.CODENAME }}
+          else
+            anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+          fi
+          git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
+        fi
+        if [ -f out/arch/arm64/boot/Image ]; then
+          cp -v out/arch/arm64/boot/Image AnyKernel3/"$TARGET"-ksu-Image
+          test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/"$TARGET"-normal-dtbo.img
+          test -f out/arch/arm64/boot/dtb && cp -v out/arch/arm64/boot/dtb AnyKernel3/"$TARGET"-normal-dtb
+        fi
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+      id: normal-cpufreq
+
+    - name: Check AnyKernel3 directory
+      run: |
+        ls -alh ${{ steps.kernel.outputs.kernel-folder }}/AnyKernel3
+    
+    - name: Building kernel with EFFCPU
+      run: |
+        sed -i '/<2553600>,/c\<2553600>;' arch/arm64/boot/dts/vendor/qcom/kona.dtsi
+        sed -i '/<2649600>,/c\//<2649600>,' arch/arm64/boot/dts/vendor/qcom/kona.dtsi
+        sed -i '/<2745600>,/c\//<2745600>,' arch/arm64/boot/dts/vendor/qcom/kona.dtsi
+        sed -i '/<2841600>;/c\//<2841600>;' arch/arm64/boot/dts/vendor/qcom/kona.dtsi
+        git submodule init && git submodule update
+        export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export KBUILD_BUILD_USER="nehal"
+        export KBUILD_BUILD_HOST="Github Actions"
+        make O=out vendor/alioth_defconfig
+        PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
+        echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+      id: build-with-effcpu
+
+    - name: AnyKernel3
+      if: ${{ success() && github.event.inputs.ANYKERNEL_URL != '' }}
+      continue-on-error: true
+      run: |
+        TARGET=alioth
+        KERNEL_NAME=ALIOTH
+        if [ ! -d "AnyKernel3" ]; then
+          if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
+            anykernel_branch=${{ github.event.inputs.CODENAME }}
+          else
+            anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+          fi
+          git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
+        fi
+        if [ -f out/arch/arm64/boot/Image ]; then
+          test -f out/arch/arm64/boot/dtb && cp -v out/arch/arm64/boot/dtb AnyKernel3/"$TARGET"-effcpu-dtb
+        fi
+        name="[E404-${KERNEL_NAME}][$(date '+%Y%m%d-%H%M%S')].zip"
+        cd AnyKernel3
+        zip -r9 "$name" */ anykernel.sh $TARGET* -x .git README.md LICENSE
+        mv "$name" ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
+        echo "zipname=$name" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+      id: anykernel
+
+    - name: Check the output directory before uploading
+      run: |
+        ls -alh ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
+    - name: Upload to Release
+      if: ${{ github.event.inputs.UPLOAD_TO_RELEASE == 'true' }}
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz-dtb
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/\[E404-ALIOTH\]*.zip
+        name: ${{ github.event.inputs.CODENAME }}-${{ github.run_id }}
+        tag_name: ${{ github.run_id }}
+        body: |
+          <b>${{ steps.workspace.outputs.build_title }}</b>
+          <b>Kernel successfully built!</b>, took ${{ steps.build-with-effcpu.outputs.elapsed_time }} seconds.
+          
+          <b>Kernel tree</b>: ${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }}
+          <b>KernelSU</b>: ${{ steps.workspace.outputs.kernelsu }}
+          <b>Action</b>: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: Image.gz-dtb
+        path: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz-dtb
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: Image-dtb
+        path: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image-dtb
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: Image.gz
+        path: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: Image
+        path: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: dtb.img
+        path: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb.img
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: dtbo.img
+        path: ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ success() && github.event.inputs.ANYKERNEL_URL != '' && github.event.inputs.UPLOAD_TO_RELEASE != 'true' }}
+      with:
+        name: ${{ steps.anykernel.outputs.zipname }}
+        path: |
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/AnyKernel3/
+          !${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/AnyKernel3/.git
+          !${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/AnyKernel3/.github
