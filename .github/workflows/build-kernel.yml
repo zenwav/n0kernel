@@ -13,9 +13,9 @@ jobs:
 
     steps:
     - name: Build Kernel
-      uses: averagePedestrian/kernel_build_action@n0kernel
+      uses: zenwav/kernel_build_action@n0kernel
       with:
-          kernel-url: https://github.com/averagePedestrian/n0kernel
+          kernel-url: https://github.com/zenwav/n0kernel
           kernel-dir: n0kernel
           kernel-branch: staging
           config: alioth_defconfig
@@ -28,9 +28,9 @@ jobs:
           ksu: true
           ksu-version: legacy
           ksu-other: true
-          ksu-url: https://github.com/backslashxx/KernelSU
+          ksu-url: https://github.com/rifsxd/KernelSU-Next
           aosp-clang-version: r536225
           anykernel3: true
-          anykernel3-url: https://github.com/averagePedestrian/AnyKernel3
+          anykernel3-url: https://github.com/zenwav/AnyKernel3
           release: true
           access-token: ${{ secrets.ACCESS_TOKEN }}

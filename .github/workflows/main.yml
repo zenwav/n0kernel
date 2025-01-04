@@ -8,7 +8,7 @@ on:
         required: false
       KERNEL_TREE:
         description: 'Kernel Tree'
-        default: 'https://github.com/averagePedestrian/n0kernel'
+        default: 'https://github.com/zenwav/n0kernel'
         required: true
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
@@ -25,10 +25,6 @@ on:
       ANYKERNEL_BRANCH:
         description: 'AnyKernel Branch (defaults to codename)'
         default: 'alioth'
-        required: false
-      CLANG_GIT_LINK:
-        description: 'Clang Git URL'
-        default: 'https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225'
         required: false
       SEND_NOTIFICATION:
         description: 'Send Notification'
@@ -98,9 +94,9 @@ jobs:
       if: ${{ steps.workspace.outputs.kernelsu == 'Yes' }}
       run: |
         if [ -d "KernelSU" ]; then
-          curl -LSs "https://gist.githubusercontent.com/averagePedestrian/453b70ad72e51e669a7b03ac799c32ca/raw/962b9181f3ebe5e9f52470b1c6c37e5542cd7518/setup.sh" | bash -s -- --cleanup
+          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s -- --cleanup
         fi
-        curl -LSs "https://gist.githubusercontent.com/averagePedestrian/453b70ad72e51e669a7b03ac799c32ca/raw/962b9181f3ebe5e9f52470b1c6c37e5542cd7518/setup.sh" | bash -s legacy
+        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
 
     - name: Building kernel
