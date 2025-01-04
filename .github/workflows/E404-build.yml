@@ -114,7 +114,9 @@ jobs:
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="Github Actions"
         make O=out vendor/alioth_defconfig
+        cat out/.config
         sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
+        cat out/.config
         PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: build
@@ -155,7 +157,9 @@ jobs:
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="Github Actions"
         make O=out vendor/alioth_defconfig
+        cat out/.config
         sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
+        cat out/.config
         PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
@@ -194,6 +198,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
+          ${{ steps.kernel.outputs.kernel-folder }}/out/.config
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz-dtb
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz

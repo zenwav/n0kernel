@@ -1,4 +1,4 @@
-name: Kernel Build (alioth) - clang-r536225
+name: Build n0kernel - Neutron Clang
 
 on:
   workflow_dispatch:
@@ -107,6 +107,7 @@ jobs:
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="Github Actions"
         make O=out vendor/alioth_defconfig
+        cat out/.config
         PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
@@ -150,6 +151,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
+          ${{ steps.kernel.outputs.kernel-folder }}/out/.config
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz-dtb
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb.img
