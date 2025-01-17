@@ -38,6 +38,11 @@ on:
         description: 'Upload to release'
         type: boolean
         default: true
+      NEUTRON_CLANG_TAG:
+        description: 'Which toolchain build to use from Neutron-Clang repos'
+        default: '10032024'
+        required: true
+       
 
 jobs:
   build:
@@ -76,7 +81,7 @@ jobs:
         cd neutron-clang
         curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
         chmod +x antman
-        ./antman -S=05012024
+        ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
         ./antman --patch=glibc
         cd ..
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
@@ -105,7 +110,7 @@ jobs:
         export PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH"
         export ARCH=arm64
         export KBUILD_BUILD_USER="nehal"
-        export KBUILD_BUILD_HOST="Github Actions"
+        export KBUILD_BUILD_HOST="GitHub Actions"
         make O=out vendor/alioth_defconfig
         sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
         PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
@@ -213,4 +218,3 @@ jobs:
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/AnyKernel3/
           !${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/AnyKernel3/.git
           !${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/AnyKernel3/.github
-
