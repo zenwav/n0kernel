@@ -107,13 +107,11 @@ jobs:
     - name: Adding SUSFS
       run: |
         git clone -b kernel-4.19 https://gitlab.com/simonpunk/susfs4ksu.git
-        ls -lh
         cd susfs4ksu
         cp ./kernel_patches/fs/* ${{ steps.kernel.outputs.kernel-folder }}/fs/
         cp ./kernel_patches/include/linux/* ${{ steps.kernel.outputs.kernel-folder }}/include/linux/
-        wget -P ${{ steps.kernel.outputs.kernel-folder }}/kernelSU-Next https://raw.githubusercontent.com/zenwav/kernel_build_action/refs/heads/n0kernel-susfs/susfs4ksu/Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
-        cd ${{ steps.kernel.outputs.kernel-folder }}/kernelSU-Next 
-        ls -lh
+        wget -P ${{ steps.kernel.outputs.kernel-folder }}/KernelSU-Next https://raw.githubusercontent.com/zenwav/kernel_build_action/refs/heads/n0kernel-susfs/susfs4ksu/Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
+        cd ${{ steps.kernel.outputs.kernel-folder }}/KernelSU-Next 
         patch -p1 < Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
       id: susfs
