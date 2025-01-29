@@ -114,7 +114,7 @@ jobs:
         cd ${{ steps.kernel.outputs.kernel-folder }}/KernelSU-Next 
         patch -p1 < Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
         cd ${{ steps.kernel.outputs.kernel-folder }}
-        wget https://raw.githubusercontent.com/zenwav/kernel_build_action/refs/heads/susfs/susfs4ksu/69_hide_stuff.patch
+        wget https://raw.githubusercontent.com/zenwav/kernel_build_action/refs/heads/n0kernel-susfs/susfs4ksu/69_hide_stuff.patch
         patch -p1 < 69_hide_stuff.patch
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
       id: susfs
