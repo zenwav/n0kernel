@@ -20,11 +20,11 @@ on:
         required: true
       ANYKERNEL_URL:
         description: 'AnyKernel Url (leave blank if you dont want AnyKernel)'
-        default: 'https://github.com/itisFarzin-Phone/AnyKernel3'
+        default: 'https://github.com/zenwav/AnyKernel3'
         required: false
       ANYKERNEL_BRANCH:
         description: 'AnyKernel Branch (defaults to codename)'
-        default: 'alioth'
+        default: 'e404_alioth'
         required: false
       CLANG_GIT_LINK:
         description: 'Clang Git URL'
@@ -124,14 +124,16 @@ jobs:
     - name: Normal CPUFreq
       run: |
         TARGET=alioth
-        if [ ! -d "AnyKernel3" ]; then
-          if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
-            anykernel_branch=${{ github.event.inputs.CODENAME }}
-          else
-            anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
-          fi
-          git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
-        fi
+        anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+        git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
+        # if [ ! -d "AnyKernel3" ]; then
+        #   if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
+        #     anykernel_branch=${{ github.event.inputs.CODENAME }}
+        #   else
+        #     anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+        #   fi
+        #   git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
+        # fi
         if [ -f out/arch/arm64/boot/Image ]; then
           cp -v out/arch/arm64/boot/Image AnyKernel3/"$TARGET"-ksu-Image
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/"$TARGET"-normal-dtbo.img
@@ -166,7 +168,7 @@ jobs:
       id: build-with-effcpu
 
     - name: AnyKernel3
-      if: ${{ success() && github.event.inputs.ANYKERNEL_URL != '' }}
+      if: ${{ success() && github.event.inputs.ANYKERNEL_URL != '' && github.event.inputs.ANYKERNEL_BRANCH != '' }}
       continue-on-error: true
       run: |
         TARGET=alioth
