@@ -32,10 +32,6 @@ on:
         options: 
         - neutron-clang
         - asop clang
-      SEND_NOTIFICATION:
-        description: 'Send Notification'
-        type: boolean
-        default: false
       ENABLE_KERNELSU:
         description: 'KernelSU'
         type: boolean
