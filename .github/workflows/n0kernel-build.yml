@@ -26,12 +26,12 @@ on:
         description: 'AnyKernel Branch (defaults to codename)'
         default: 'nokernel_alioth'
         required: false
-      WHICH CLANG:
+      WHICH_CLANG:
         type: choice
         description: Which clang to use
         options: 
         - neutron-clang
-        - asop clang
+        - aosp-clang
       ENABLE_KERNELSU:
         description: 'KernelSU'
         type: boolean
@@ -80,21 +80,21 @@ jobs:
         sudo apt-get update
         sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev libc6-dev device-tree-compiler ca-certificates python3 xz-utils libc6-dev aria2 build-essential ccache libncurses5
         if [[ "${{ github.event.inputs.WHICH_CLANG }}" == "neutron-clang" ]]; then
-            mkdir clang
-            cd clang
-            curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
-            chmod +x antman
-            ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
-            ./antman --patch=glibc
-            cd ..
-        elif [[ "${{ github.event.inputs.WHICH_CLANG }}" == "asop clang" ]]; then
-            # Download AOSP Clang
-            wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O clang.tar.gz
-            mkdir clang
-            tar -xf clang.tar.gz -C clang
+          mkdir clang
+          cd clang
+          curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+          chmod +x antman
+          ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
+          ./antman --patch=glibc
+          cd ..
+        elif [[ "${{ github.event.inputs.WHICH_CLANG }}" == "aosp-clang" ]]; then
+          # Download AOSP Clang
+          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O clang.tar.gz
+          mkdir clang
+          tar -xf clang.tar.gz -C clang
         else
-            echo "Error: Invalid clang option selected"
-            exit 1
+          echo "Error: Invalid clang option selected"
+          exit 1
         fi
         # mkdir neutron-clang
         # cd neutron-clang
