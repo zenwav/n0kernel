@@ -26,6 +26,12 @@ on:
         description: 'AnyKernel Branch (defaults to codename)'
         default: 'nokernel_alioth'
         required: false
+      WHICH CLANG:
+        type: choice
+        description: Which clang to use
+        options: 
+        - neutron-clang
+        - asop clang
       SEND_NOTIFICATION:
         description: 'Send Notification'
         type: boolean
@@ -77,13 +83,30 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev libc6-dev device-tree-compiler ca-certificates python3 xz-utils libc6-dev aria2 build-essential ccache libncurses5
-        mkdir neutron-clang
-        cd neutron-clang
-        curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
-        chmod +x antman
-        ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
-        ./antman --patch=glibc
-        cd ..
+        if [[ "${{ github.event.inputs.WHICH_CLANG }}" == "neutron-clang" ]]; then
+            mkdir clang
+            cd clang
+            curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+            chmod +x antman
+            ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
+            ./antman --patch=glibc
+            cd ..
+        elif [[ "${{ github.event.inputs.WHICH_CLANG }}" == "asop clang" ]]; then
+            # Download AOSP Clang
+            wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz -O clang.tar.gz
+            mkdir clang
+            tar -xf clang.tar.gz -C clang
+        else
+            echo "Error: Invalid clang option selected"
+            exit 1
+        fi
+        # mkdir neutron-clang
+        # cd neutron-clang
+        # curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+        # chmod +x antman
+        # ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
+        # ./antman --patch=glibc
+        # cd ..
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
       id: tools
@@ -107,13 +130,13 @@ jobs:
     - name: Building kernel
       run: |
         git submodule init && git submodule update
-        export PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH"
+        export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
         export ARCH=arm64
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
         make O=out vendor/alioth_defconfig
         # sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
-        PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
+        PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: build
