@@ -26,12 +26,10 @@ on:
         description: 'AnyKernel Branch (defaults to codename)'
         default: 'nokernel_alioth'
         required: false
-      WHICH_CLANG:
-        type: choice
-        description: Which clang to use
-        options: 
-        - neutron-clang
-        - aosp-clang
+      SEND_NOTIFICATION:
+        description: 'Send Notification'
+        type: boolean
+        default: false
       ENABLE_KERNELSU:
         description: 'KernelSU'
         type: boolean
@@ -78,39 +76,17 @@ jobs:
     - name: Prepare the build environment
       run: |
         sudo apt-get update
-        sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev libc6-dev device-tree-compiler ca-certificates python3 xz-utils libc6-dev aria2 build-essential ccache libncurses5
-        if [[ "${{ github.event.inputs.WHICH_CLANG }}" == "neutron-clang" ]]; then
-          mkdir clang
-          cd clang
-          curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
-          chmod +x antman
-          ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
-          ./antman --patch=glibc
-          cd ..
-        elif [[ "${{ github.event.inputs.WHICH_CLANG }}" == "aosp-clang" ]]; then
-          # Download AOSP Clang
-          aria2c -x 8 -s 8 -o clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz
-          mkdir clang
-          tar -zxf clang.tar.gz -C clang
-          # Download AOSP GCC-64
-          aria2c -x 8 -s 8 -o gcc-aarch64.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+archive/961622e926a1b21382dba4dd9fe0e5fb3ee5ab7c.tar.gz
-          mkdir gcc-64
-          tar -C gcc-64 -zxf gcc-aarch64.tar.gz
-          # Download AOSP GCC-32
-          aria2c -x 8 -s 8 -o gcc-arm.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/+archive/cb7b3ac1b7fdb49474ff68761909934d1142f594.tar.gz
-          mkdir gcc-32
-          tar -C gcc-32 -zxf gcc-arm.tar.gz
-        else
-          echo "Error: Invalid clang option selected"
-          exit 1
-        fi
-        # mkdir neutron-clang
-        # cd neutron-clang
-        # curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
-        # chmod +x antman
-        # ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
-        # ./antman --patch=glibc
-        # cd ..
+        sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl \
+                                                        curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev \
+                                                        libc6-dev device-tree-compiler ca-certificates python3 \
+                                                        xz-utils libc6-dev aria2 build-essential ccache libncurses5
+        mkdir neutron-clang
+        cd neutron-clang
+        curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+        chmod +x antman
+        ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
+        ./antman --patch=glibc
+        cd ..
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
       id: tools
@@ -134,37 +110,19 @@ jobs:
     - name: Building kernel
       run: |
         git submodule init && git submodule update
-        # export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
-        if [[ "${{ github.event.inputs.WHICH_CLANG }}" == "neutron-clang" ]]; then
-          export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
-        elif [[ "${{ github.event.inputs.WHICH_CLANG }}" == "aosp-clang" ]]; then
-          export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:${{ steps.tools.outputs.tools-folder }}/gcc-64/bin:${{ steps.tools.outputs.tools-folder }}/gcc-32/bin:$PATH"
-          export LD_LIBRARY_PATH="${{ steps.tools.outputs.tools-folder }}/clang/lib:$LD_LIBRARY_PATH"
-        fi
+        export PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH"
         export ARCH=arm64
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
         make O=out vendor/alioth_defconfig
         # sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
-        # PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" make -j$(nproc --all) O=out CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- LLVM=1 LLVM_IAS=1
-        if [[ "${{ github.event.inputs.WHICH_CLANG }}" == "neutron-clang" ]]; then
-          PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" \
-          make -j$(nproc --all) O=out \
-                                CC=clang \
-                                CROSS_COMPILE=aarch64-linux-gnu- \
-                                CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
-                                LLVM=1 \
-                                LLVM_IAS=1
-        elif [[ "${{ github.event.inputs.WHICH_CLANG }}" == "aosp-clang" ]]; then
-          PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:${{ steps.tools.outputs.tools-folder }}/gcc-64/bin:${{ steps.tools.outputs.tools-folder }}/gcc-32/bin:$PATH" \
-          make -j$(nproc --all) O=out \
-                                CC=clang \
-                                CLANG_TRIPLE=aarch64-linux-gnu- \
-                                CROSS_COMPILE=aarch64-linux-gnu- \
-                                CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
-                                LLVM=1 \
-                                LLVM_IAS=1
-        fi
+        PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" \
+        make -j$(nproc --all) O=out \
+                              CC=clang \
+                              CROSS_COMPILE=aarch64-linux-gnu- \
+                              CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+                              LLVM=1 \
+                              LLVM_IAS=1
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: build
