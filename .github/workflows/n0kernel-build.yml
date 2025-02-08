@@ -26,10 +26,6 @@ on:
         description: 'AnyKernel Branch (defaults to codename)'
         default: 'nokernel_alioth'
         required: false
-      SEND_NOTIFICATION:
-        description: 'Send Notification'
-        type: boolean
-        default: false
       ENABLE_KERNELSU:
         description: 'KernelSU'
         type: boolean
