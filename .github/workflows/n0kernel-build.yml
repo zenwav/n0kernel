@@ -191,7 +191,7 @@ jobs:
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.zipname }}
         name: ${{ github.event.inputs.CODENAME }}-${{ env.SHORT_SHA }}
-        tag_name: ${{ github.sha }}
+        tag_name: ${{ github.run_id }}
         body: |
           <b>${{ steps.workspace.outputs.build_title }}</b>
           <b>Kernel successfully built!</b>, took ${{ steps.build.outputs.elapsed_time }} seconds.
