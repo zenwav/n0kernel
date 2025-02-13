@@ -34,8 +34,14 @@ on:
         description: 'Which toolchain build to use from Neutron-Clang repos'
         default: '10032024'
         required: true
-       
-
+      WHICH_KSU:
+        type: choice
+        description: 'Choose the fork of KSU to use'
+        options: 
+        - KSU-Next (rifsxd)
+        - MSKU (5ec1cff)
+        - RKSU (rsuntk)
+        
 jobs:
   build:
     if: github.event.repository.owner.id == github.event.sender.id
@@ -93,10 +99,25 @@ jobs:
     - name: Adding KernelSU
       if: ${{ steps.workspace.outputs.kernelsu == 'Yes' }}
       run: |
-        if [ -d "KernelSU" ]; then
-          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s -- --cleanup
+        if [[ "${{ github.event.inputs.WHICH_KSU }}" == "MSKU (5ec1cff)" ]]; then
+            echo "You selected MSKU (5ec1cff)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+            curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s main
+        elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "RKSU (rsuntk)" ]]; then
+            echo "You selected RKSU (rsuntk)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+            curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+        else
+            echo "Selecting KSU-Next (rifsxd)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+            curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
         fi
-        curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
 
     - name: Building kernel
