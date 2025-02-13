@@ -177,7 +177,7 @@ jobs:
         ls -al ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
         
     - name: Get short SHA
-      run: echo "SHORT_SHA=${{ github.sha }::0:7}" >> $GITHUB_ENV
+      run: echo "SHORT_SHA=${{ github.sha }::0:7}" >> "$GITHUB_ENV"
       shell: bash
 
     - name: Upload to Release
@@ -190,7 +190,7 @@ jobs:
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb.img
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.zipname }}
-        name: ${{ github.event.inputs.CODENAME }}-${{ github.run_id }}
+        name: ${{ github.event.inputs.CODENAME }}-${{ env.SHORT_SHA }}
         tag_name: ${{ env.SHORT_SHA }}
         body: |
           <b>${{ steps.workspace.outputs.build_title }}</b>
