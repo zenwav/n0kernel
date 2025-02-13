@@ -177,7 +177,7 @@ jobs:
         ls -al ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
         
     - name: Get short SHA
-      run: echo "SHORT_SHA=${{ github.sha }::0:7}" >> "$GITHUB_ENV"
+      run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       shell: bash
 
     - name: Upload to Release
@@ -191,7 +191,7 @@ jobs:
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.zipname }}
         name: ${{ github.event.inputs.CODENAME }}-${{ env.SHORT_SHA }}
-        tag_name: ${{ env.SHORT_SHA }}
+        tag_name: ${{ github.sha }}
         body: |
           <b>${{ steps.workspace.outputs.build_title }}</b>
           <b>Kernel successfully built!</b>, took ${{ steps.build.outputs.elapsed_time }} seconds.
