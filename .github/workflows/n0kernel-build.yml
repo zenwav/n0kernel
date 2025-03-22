@@ -13,7 +13,7 @@ on:
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
         required: true
-        default: 'staging'
+        default: 'minimized-hooks'
       CODENAME:
         description: 'Phone Codename'
         default: 'alioth'
@@ -164,7 +164,7 @@ jobs:
           cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ -rv
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
         fi
-        name=n0kernel${{ fromJSON('["", "-KSUN"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
+        name=n0kernel${{ fromJSON('["", "-KSUN"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}-min.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
         mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
@@ -194,10 +194,11 @@ jobs:
         name: N0kernel-${{ env.SHORT_SHA }}
         tag_name: ${{ github.run_id }}
         body: |
-          <b>${{ steps.workspace.outputs.build_title }}</b>
+          <b>N0Kernel ${{ github.event.inputs.KERNEL_TREE_BRANCH }}</b>
           <b>Kernel successfully built!</b>, took ${{ steps.build.outputs.elapsed_time }} seconds.
 
           <b>Kernel tree</b>: ${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }}
+          <b>Kernel Branch</b>: ${{ github.event.inputs.KERNEL_TREE_BRANCH }}
           <b>KernelSU</b>: ${{ steps.workspace.outputs.kernelsu }}
           <b>Action</b>: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       env:
