@@ -2118,6 +2118,10 @@ COMPAT_SYSCALL_DEFINE3(execve, const char __user *, filename,
 	const compat_uptr_t __user *, argv,
 	const compat_uptr_t __user *, envp)
 {
+#ifdef CONFIG_KSU
+	if (!ksu_execveat_hook)
+		ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL); /* 32-bit su support */
+#endif
 	return compat_do_execve(getname(filename), argv, envp);
 }
 
