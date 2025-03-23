@@ -116,7 +116,7 @@ jobs:
             if [ -d "KernelSU" ]; then
               curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s -- --cleanup
             fi
-            curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+            curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
         fi
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
 
