@@ -45,7 +45,7 @@ on:
 jobs:
   build:
     if: github.event.repository.owner.id == github.event.sender.id
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -77,7 +77,7 @@ jobs:
         sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl \
                                                         curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev \
                                                         libc6-dev device-tree-compiler ca-certificates python3 \
-                                                        xz-utils libc6-dev aria2 build-essential ccache libncurses5
+                                                        xz-utils libc6-dev aria2 build-essential ccache libncurses6
         mkdir neutron-clang
         cd neutron-clang
         curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
