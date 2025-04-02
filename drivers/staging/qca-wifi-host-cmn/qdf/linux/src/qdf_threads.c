@@ -106,8 +106,14 @@ void qdf_busy_wait(uint32_t us_interval)
 }
 qdf_export_symbol(qdf_busy_wait);
 
+void qdf_set_wake_up_idle(bool idle)                                                                                                                                                          
+{                                                                                                                                                                                             
+    /* This function seems to be missing its implementation */                                                                                                                                
+    /* Adding a stub to allow compilation */                                                                                                                                                  
+    pr_warn_once("qdf_set_wake_up_idle: Missing implementation\n");                                                                                                                           
+} 
+
 qdf_export_symbol(qdf_set_wake_up_idle);
-EXPORT_SYMBOL(qdf_set_wake_up_idle);
 
 void qdf_set_user_nice(qdf_thread_t *thread, long nice)
 {
