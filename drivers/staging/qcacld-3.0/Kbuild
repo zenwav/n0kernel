@@ -1,9 +1,9 @@
 # We can build either as part of a standalone Kernel build or as
 # an external module.  Determine which mechanism is being used
 ifeq ($(MODNAME),)
-	KERNEL_BUILD := y
+	KERNEL_BUILD := n
 else
-	KERNEL_BUILD := y
+	KERNEL_BUILD := n
 endif
 
 # Force user build
