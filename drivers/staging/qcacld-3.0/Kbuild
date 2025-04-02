@@ -3,7 +3,7 @@
 ifeq ($(MODNAME),)
 	KERNEL_BUILD := y
 else
-	KERNEL_BUILD := n
+	KERNEL_BUILD := y
 endif
 
 # Force user build
