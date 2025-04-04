@@ -13,7 +13,7 @@ on:
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
         required: true
-        default: 'minimized-hooks'
+        default: 'sdllvm'
       CODENAME:
         description: 'Phone Codename'
         default: 'alioth'
@@ -77,13 +77,12 @@ jobs:
         sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl \
                                                         curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev \
                                                         libc6-dev device-tree-compiler ca-certificates python3 \
-                                                        xz-utils libc6-dev aria2 build-essential ccache libncurses6
-        mkdir neutron-clang
-        cd neutron-clang
-        curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
-        chmod +x antman
-        ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
-        # ./antman --patch=glibc
+                                                        xz-utils libc6-dev aria2 build-essential ccache libncurses6 \
+                                                        gcc-multilib
+        mkdir sd-clang
+        cd sd-clang
+        wget -q https://github.com/zenwav/sdllvm_arm/releases/download/sdllvm_arm/sdllvm_arm.tar.gz
+        tar -xzf sdllvm_arm.tar.gz
         cd ..
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
@@ -119,17 +118,18 @@ jobs:
             curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
         fi
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
-
+        
     - name: Building kernel
       run: |
         git submodule init && git submodule update
-        export PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH"
+        export PATH="${{ steps.tools.outputs.tools-folder }}/sd-clang/19.0.0.0/bin:$PATH"
+        echo $(clang -v)
         export ARCH=arm64
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
         make O=out CC=clang LLVM=1 LLVM_IAS=1 vendor/alioth_defconfig
         # sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
-        PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" \
+        PATH="${{ steps.tools.outputs.tools-folder }}/sd-clang/19.0.0.0/bin:$PATH" \
         make -j$(nproc --all) O=out \
                               CC=clang \
                               CROSS_COMPILE=aarch64-linux-gnu- \
@@ -164,7 +164,7 @@ jobs:
           cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ -rv
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
         fi
-        name=n0kernel${{ fromJSON('["", "-KSUN"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}-min.zip
+        name=n0kernel${{ fromJSON('["", "-KSUN"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}-sd.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
         mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
