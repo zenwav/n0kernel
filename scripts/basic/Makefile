@@ -8,6 +8,7 @@
 # ---------------------------------------------------------------------------
 # fixdep: 	 Used to generate dependency information during build process
 
+HOST_EXTRACFLAGS += -I/usr/include/
 hostprogs-y	:= fixdep
 always		:= $(hostprogs-y)
 
