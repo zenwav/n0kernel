@@ -84,7 +84,7 @@ jobs:
         wget -q https://github.com/zenwav/sdllvm_arm/releases/download/sdllvm_arm/sdllvm_arm.tar.gz
         tar -xzf sdllvm_arm.tar.gz
         cd ..
-        sudo apt-get purge clang llvm
+        sudo apt-get purge -y clang llvm
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
       id: tools
