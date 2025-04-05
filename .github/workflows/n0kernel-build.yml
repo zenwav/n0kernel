@@ -126,6 +126,7 @@ jobs:
         export PATH="${{ steps.tools.outputs.tools-folder }}/sd-clang/19.0.0.0/bin:$PATH"
         echo $(clang -v)
         export ARCH=arm64
+        export SUBARCH=ARM64
         export KBUILD_BUILD_USER="nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
         make O=out CC=clang LLVM=1 LLVM_IAS=1 vendor/alioth_defconfig
@@ -134,7 +135,7 @@ jobs:
         make -j$(nproc --all) O=out \
                               CC=clang \
                               CROSS_COMPILE=aarch64-linux-gnu- \
-                              CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+                              CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
                               LLVM=1 \
                               LLVM_IAS=1
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
