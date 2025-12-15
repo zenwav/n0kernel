@@ -1,0 +1,204 @@
+name: Build n0kernel - Neutron Clang
+
+on:
+  workflow_dispatch:
+    inputs:
+      BUILD_TITLE:
+        description: 'Custom Build Title'
+        required: false
+      KERNEL_TREE:
+        description: 'Kernel Tree'
+        default: 'https://github.com/zenwav/n0kernel'
+        required: true
+      KERNEL_TREE_BRANCH:
+        description: 'Kernel Tree Branch'
+        required: true
+        default: 'rksu'
+      CODENAME:
+        description: 'Phone Codename'
+        default: 'alioth'
+        required: true
+      ANYKERNEL_URL:
+        description: 'AnyKernel Url (leave blank if you dont want AnyKernel)'
+        default: 'https://github.com/zenwav/AnyKernel3'
+        required: false
+      ANYKERNEL_BRANCH:
+        description: 'AnyKernel Branch (defaults to codename)'
+        default: 'nokernel_alioth'
+        required: false
+      ENABLE_KERNELSU:
+        description: 'KernelSU'
+        type: boolean
+        default: true
+      NEUTRON_CLANG_TAG:
+        description: 'Which toolchain build to use from Neutron-Clang repos'
+        default: '10032024'
+        required: true
+      WHICH_KSU:
+        type: choice
+        description: 'Choose the fork of KSU to use'
+        options: 
+        - KSU-Next (rifsxd)
+        - MSKU (5ec1cff)
+        - RKSU (rsuntk)
+        
+jobs:
+  build:
+    if: github.event.repository.owner.id == github.event.sender.id
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+    
+    - name: Display User Inputs
+      run: |
+        echo "::group::User Environment Variables"
+        echo "Custom Build Title: ${{ github.event.inputs.BUILD_TITLE }}"
+        echo "Kernel Tree: ${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }}"
+        echo "Codename: ${{ github.event.inputs.CODENAME }}"
+        echo "AnyKernel Url: ${{ github.event.inputs.ANYKERNEL_URL }}/tree/${{ github.event.inputs.ANYKERNEL_BRANCH }}"
+        echo "Send Notification: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}
+        echo "KernelSU: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}
+        echo "::endgroup::"
+
+    - name: Initialize workspace
+      run: |
+        mkdir workspace
+        cd workspace
+        echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
+        echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+        echo "kernelsu=${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}" >> $GITHUB_OUTPUT
+        echo "build_title=${{ github.event.inputs.BUILD_TITLE || github.event.inputs.CODENAME }}" >> $GITHUB_OUTPUT
+      id: workspace
+
+    - name: Prepare the build environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl \
+                                                        curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev \
+                                                        libc6-dev device-tree-compiler ca-certificates python3 \
+                                                        xz-utils libc6-dev aria2 build-essential ccache libncurses5
+        mkdir neutron-clang
+        cd neutron-clang
+        curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+        chmod +x antman
+        ./antman -S=${{ github.event.inputs.NEUTRON_CLANG_TAG }}
+        ./antman --patch=glibc
+        cd ..
+        echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.workspace.outputs.workspace-folder }}
+      id: tools
+
+    - name: Clone kernel source
+      run: |
+        git clone --depth=1 ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} kernel_tree
+        echo "kernel-folder=$(pwd)/kernel_tree" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.workspace.outputs.workspace-folder }}
+      id: kernel
+
+    - name: Adding KernelSU
+      if: ${{ steps.workspace.outputs.kernelsu == 'Yes' }}
+      run: |
+        if [[ "${{ github.event.inputs.WHICH_KSU }}" == "MSKU (5ec1cff)" ]]; then
+            echo "You selected MSKU (5ec1cff)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+            curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s main
+        elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "RKSU (rsuntk)" ]]; then
+            echo "You selected RKSU (rsuntk)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+            curl -LSs "curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s v3.0.0-20-legacy
+        else
+            echo "Selecting KSU-Next (rifsxd)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+            curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+        fi
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+
+    - name: Building kernel
+      run: |
+        git submodule init && git submodule update
+        export PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH"
+        export ARCH=arm64
+        export KBUILD_BUILD_USER="nehal"
+        export KBUILD_BUILD_HOST="GitHub Actions"
+        make O=out vendor/alioth_defconfig
+        # sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
+        PATH="${{ steps.tools.outputs.tools-folder }}/neutron-clang/bin:$PATH" \
+        make -j$(nproc --all) O=out \
+                              CC=clang \
+                              CROSS_COMPILE=aarch64-linux-gnu- \
+                              CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+                              LLVM=1 \
+                              LLVM_IAS=1
+        echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+      id: build
+
+    - name: AnyKernel3
+      if: ${{ success() && github.event.inputs.ANYKERNEL_URL != '' && github.event.inputs.ANYKERNEL_BRANCH != '' }}
+      continue-on-error: true
+      run: |
+        anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+        git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
+
+        # if [ ! -d "AnyKernel3" ]; then
+        #   if [[ -z "${{ github.event.inputs.ANYKERNEL_BRANCH }}" ]]; then
+        #     anykernel_branch=${{ github.event.inputs.CODENAME }}
+        #   else
+        #     anykernel_branch=${{ github.event.inputs.ANYKERNEL_BRANCH }}
+        #   fi
+        #   git clone --recursive --depth=1 ${{ github.event.inputs.ANYKERNEL_URL }} -b $anykernel_branch AnyKernel3
+        # fi
+        
+        if [ -f out/arch/arm64/boot/Image ]; then
+          cp -f out/arch/arm64/boot/Image AnyKernel3/ -rv
+          test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
+          test -f out/arch/arm64/boot/dtb.img && cp -v out/arch/arm64/boot/dtb.img AnyKernel3/dtb
+        elif [ -f out/arch/arm64/boot/Image.gz-dtb]; then
+          cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ -rv
+          test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
+        fi
+        name=n0kernel${{ fromJSON('["", "-RKSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
+        cd AnyKernel3
+        zip -r9 $name * -x README $name
+        mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
+        echo "zipname=$name" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.kernel.outputs.kernel-folder }}
+      id: anykernel
+
+    - name: Check the output directory before uploading
+      run: |
+        ls -al ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
+        
+    - name: Get short SHA
+      run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+      shell: bash
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        preserve_order: true
+        files: |
+          ${{ steps.kernel.outputs.kernel-folder }}/out/.config
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz-dtb
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb.img
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.zipname }}
+        name: N0kernel-${{ env.SHORT_SHA }}
+        tag_name: ${{ github.run_id }}
+        body: |
+          <b>${{ steps.workspace.outputs.build_title }}</b>
+          <b>Kernel successfully built!</b>, took ${{ steps.build.outputs.elapsed_time }} seconds.
+
+          <b>Kernel tree</b>: ${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }}
+          <b>KernelSU</b>: ${{ steps.workspace.outputs.kernelsu }}
+          <b>Action</b>: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
