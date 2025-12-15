@@ -186,6 +186,7 @@ jobs:
         preserve_order: true
         files: |
           ${{ steps.kernel.outputs.kernel-folder }}/out/.config
+          ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz-dtb
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/Image.gz
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb.img
