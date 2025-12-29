@@ -80,7 +80,7 @@ jobs:
                                                         xz-utils libc6-dev aria2 build-essential ccache libncurses-dev
                                                         #libncurses5
 
-        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz -O clang.tar.gz
+        wget -nv -O clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz
         mkdir clang
         tar -xf clang.tar.gz -C clang
         echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
