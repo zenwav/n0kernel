@@ -66,6 +66,8 @@ struct ptrace_peeksiginfo_args {
 #define PTRACE_SETSIGMASK	0x420b
 
 #define PTRACE_SECCOMP_GET_FILTER	0x420c
+#define PTRACE_EVENTMSG_SYSCALL_ENTRY	1
+#define PTRACE_EVENTMSG_SYSCALL_EXIT	2
 #define PTRACE_SECCOMP_GET_METADATA	0x420d
 
 struct seccomp_metadata {
