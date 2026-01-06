@@ -77,6 +77,20 @@ jobs:
       with:
         path: workspace/clang
         key: aosp-clang-r574158
+    
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-${{ github.ref_name }}-
+
+    - name: Configure ccache
+      run: |
+        ccache --set-config=max_size=2.0G
+        ccache --set-config=compression=true
+        ccache -z  # Zero statistics
 
     - name: Prepare the build environment
       run: |
@@ -146,15 +160,25 @@ jobs:
         export SUBARCH="arm64"
         export KBUILD_BUILD_USER="Nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
-        make O=out CC=clang LLVM=1 LLVM_IAS=1 vendor/alioth_defconfig
+
+        # Set up ccache environment
+        export CCACHE_BASEDIR="${{ steps.kernel.outputs.kernel-folder }}"
+        export CCACHE_COMPILERCHECK=content
+        
+        make O=out CC="ccache clang" LLVM=1 LLVM_IAS=1 vendor/alioth_defconfig
         # sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
         PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" \
         make -j$(nproc --all) O=out \
-                              CC=clang \
+                              CC="ccache clang" \
                               CROSS_COMPILE=aarch64-linux-gnu- \
                               CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
                               LLVM=1 \
                               LLVM_IAS=1
+
+        echo "::group::Ccache Stats"
+        ccache -s
+        echo "::endgroup::"
+        
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: build
