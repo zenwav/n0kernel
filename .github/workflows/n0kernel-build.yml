@@ -71,20 +71,35 @@ jobs:
         echo "build_title=${{ github.event.inputs.BUILD_TITLE || github.event.inputs.CODENAME }}" >> $GITHUB_OUTPUT
       id: workspace
 
+    - name: Cache AOSP Clang
+      id: cache-clang
+      uses: actions/cache@v4
+      with:
+        path: workspace/clang
+        key: aosp-clang-r574158
+
     - name: Prepare the build environment
       run: |
-        sudo apt-get update
-        sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl \
+        sudo apt-get update -qq
+        sudo apt-get install --no-install-recommends -y -qq libarchive-tools binutils git make bc bison openssl \
                                                         curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev \
                                                         libc6-dev device-tree-compiler ca-certificates python3 \
                                                         xz-utils libc6-dev aria2 build-essential ccache libncurses-dev
-                                                        #libncurses5
+
+    - name: Download AOSP Clang (if not cached)
+      if: steps.cache-clang.outputs.cache-hit != 'true'
+      run: |
         aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz"
-        mkdir clang
+        mkdir -p clang
         tar -xf clang.tar.gz -C clang
-        echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
+        rm clang.tar.gz
+        echo "Clang downloaded and extracted"
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
+
+    - name: Set toolchain path
       id: tools
+      run: |
+        echo "tools-folder=${{ steps.workspace.outputs.workspace-folder }}" >> $GITHUB_OUTPUT
 
     - name: Display toolchain version
       run: |
