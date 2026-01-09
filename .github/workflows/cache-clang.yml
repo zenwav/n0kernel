@@ -20,15 +20,14 @@ jobs:
       - name: Download Clang
         if: steps.cache-clang.outputs.cache-hit != 'true'
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install --no-install-recommends -qq aria2
           mkdir -p workspace/clang
-          # Download the specific clang version (r574158) directly from AOSP as a tarball
-          # This is faster than git cloning the entire prebuilts repo
-          wget "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/master/clang-r574158.tar.gz" -O clang.tar.gz
           
-          # Extract to the workspace/clang directory
-          tar -xzf clang.tar.gz -C workspace/clang
+          aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz"
           
-          # Clean up
+          tar -xf clang.tar.gz -C workspace/clang
+          
           rm clang.tar.gz
 
       - name: Verify Clang
