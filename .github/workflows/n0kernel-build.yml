@@ -1,4 +1,4 @@
-name: Build n0kernel - Neutron Clang
+name: Build n0kernel
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
         required: true
-        default: 'rksu'
+        default: 'bpf-rsku'
       CODENAME:
         description: 'Phone Codename'
         default: 'alioth'
@@ -37,10 +37,11 @@ on:
       WHICH_KSU:
         type: choice
         description: 'Choose the fork of KSU to use'
-        options: 
+        options:
+        - RKSU (rsuntk) 
         - KSU-Next (rifsxd)
         - MSKU (5ec1cff)
-        - RKSU (rsuntk)
+        
         
 jobs:
   build:
@@ -57,8 +58,7 @@ jobs:
         echo "Kernel Tree: ${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }}"
         echo "Codename: ${{ github.event.inputs.CODENAME }}"
         echo "AnyKernel Url: ${{ github.event.inputs.ANYKERNEL_URL }}/tree/${{ github.event.inputs.ANYKERNEL_BRANCH }}"
-        echo "Send Notification: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}
-        echo "KernelSU: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}
+        echo "KernelSU: ${{ fromJSON('["No", "Yes"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}"
         echo "::endgroup::"
 
     - name: Initialize workspace
@@ -71,21 +71,54 @@ jobs:
         echo "build_title=${{ github.event.inputs.BUILD_TITLE || github.event.inputs.CODENAME }}" >> $GITHUB_OUTPUT
       id: workspace
 
+    - name: Cache AOSP Clang
+      id: cache-clang
+      uses: actions/cache@v4
+      with:
+        path: workspace/clang
+        key: aosp-clang-r574158
+    
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-${{ github.ref_name }}-
+
     - name: Prepare the build environment
       run: |
-        sudo apt-get update
-        sudo apt-get install --no-install-recommends -y libarchive-tools binutils git make bc bison openssl \
+        sudo apt-get update -qq
+        sudo apt-get install --no-install-recommends -y -qq libarchive-tools binutils git make bc bison openssl \
                                                         curl zip kmod cpio flex libelf-dev libssl-dev libtfm-dev \
                                                         libc6-dev device-tree-compiler ca-certificates python3 \
                                                         xz-utils libc6-dev aria2 build-essential ccache libncurses-dev
-                                                        #libncurses5
+    - name: Configure ccache
+      run: |
+        ccache --set-config=max_size=2.0G
+        ccache --set-config=compression=true
+        ccache -z  # Zero statistics
 
-        wget -nv -O clang.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz
-        mkdir clang
+    - name: Download AOSP Clang (if not cached)
+      if: steps.cache-clang.outputs.cache-hit != 'true'
+      run: |
+        aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz"
+        mkdir -p clang
         tar -xf clang.tar.gz -C clang
-        echo "tools-folder=$(pwd)" >> $GITHUB_OUTPUT
+        rm clang.tar.gz
+        echo "Clang downloaded and extracted"
       working-directory: ${{ steps.workspace.outputs.workspace-folder }}
+
+    - name: Set toolchain path
       id: tools
+      run: |
+        echo "tools-folder=${{ steps.workspace.outputs.workspace-folder }}" >> $GITHUB_OUTPUT
+
+    - name: Display toolchain version
+      run: |
+        export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
+        clang --version
+      working-directory: ${{ steps.workspace.outputs.workspace-folder }}
 
     - name: Clone kernel source
       run: |
@@ -108,7 +141,7 @@ jobs:
             if [ -d "KernelSU" ]; then
               curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
             fi
-              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s v3.0.0-30-legacy
+              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
         else
             echo "Selecting KSU-Next (rifsxd)"
             if [ -d "KernelSU" ]; then
@@ -122,22 +155,29 @@ jobs:
       run: |
         git submodule init && git submodule update
         export PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH"
-        export ARCH=arm64
+        export ARCH="arm64"
+        export SUBARCH="arm64"
         export KBUILD_BUILD_USER="Nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
-        make O=out vendor/alioth_defconfig
-        echo "### Clang Version" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        clang -v >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+        # Set up ccache environment
+        export CCACHE_BASEDIR="${{ steps.kernel.outputs.kernel-folder }}"
+        export CCACHE_COMPILERCHECK=content
+        
+        make O=out CC="ccache clang" LLVM=1 LLVM_IAS=1 vendor/alioth_defconfig
         # sed -i '/CONFIG_LTO_CLANG_THIN/c\CONFIG_LTO_CLANG_THIN=n' out/.config && sed -i '/CONFIG_LTO_CLANG_FULL/c\CONFIG_LTO_CLANG_FULL=y' out/.config
         PATH="${{ steps.tools.outputs.tools-folder }}/clang/bin:$PATH" \
         make -j$(nproc --all) O=out \
-                              CC=clang \
+                              CC="ccache clang" \
                               CROSS_COMPILE=aarch64-linux-gnu- \
                               CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
                               LLVM=1 \
                               LLVM_IAS=1
+
+        echo "::group::Ccache Stats"
+        ccache -s
+        echo "::endgroup::"
+        
         echo "elapsed_time=$(echo "$(date +%s)"-"${{ steps.workspace.outputs.start_time }}" | bc)" >> $GITHUB_OUTPUT
       working-directory: ${{ steps.kernel.outputs.kernel-folder }}
       id: build
@@ -166,7 +206,7 @@ jobs:
           cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ -rv
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
         fi
-        name=n0kernel${{ fromJSON('["", "-RKSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
+        name=n0kernel${{ fromJSON('["", "-BPF-RKSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
         mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
@@ -194,7 +234,7 @@ jobs:
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtb.img
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/dtbo.img
           ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/${{ steps.anykernel.outputs.zipname }}
-        name: N0kernel-${{ env.SHORT_SHA }}
+        name: n0kernel-${{ env.SHORT_SHA }}
         tag_name: ${{ github.run_id }}
         body: |
           <b>${{ steps.workspace.outputs.build_title }}</b>
