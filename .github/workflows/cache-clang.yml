@@ -1,0 +1,37 @@
+name: Cache Warmer (Clang)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  warm-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Clang
+        id: cache-clang
+        uses: actions/cache@v4
+        with:
+          path: workspace/clang
+          key: aosp-clang-r574158
+          # Optional: restore keys if you want to update from previous versions
+          # restore-keys: |
+          #   aosp-clang-
+
+      - name: Download Clang
+        if: steps.cache-clang.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p workspace/clang
+          # Download the specific clang version (r574158) directly from AOSP as a tarball
+          # This is faster than git cloning the entire prebuilts repo
+          wget "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/master/clang-r574158.tar.gz" -O clang.tar.gz
+          
+          # Extract to the workspace/clang directory
+          tar -xzf clang.tar.gz -C workspace/clang
+          
+          # Clean up
+          rm clang.tar.gz
+
+      - name: Verify Clang
+        if: steps.cache-clang.outputs.cache-hit != 'true'
+        run: |
+          ./workspace/clang/bin/clang --version
