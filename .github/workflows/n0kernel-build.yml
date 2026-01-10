@@ -95,6 +95,8 @@ jobs:
                                                         xz-utils libc6-dev aria2 build-essential ccache libncurses-dev
     - name: Configure ccache
       run: |
+        echo "CCACHE_DIR=$HOME/.ccache" >> $GITHUB_ENV
+        mkdir -p ~/.ccache
         ccache --set-config=max_size=2.0G
         ccache --set-config=compression=true
         ccache -z  # Zero statistics
