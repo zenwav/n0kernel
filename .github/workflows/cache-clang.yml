@@ -9,10 +9,10 @@ jobs:
     steps:
       - name: Cache Clang
         id: cache-clang
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: workspace/clang
-          key: aosp-clang-r574158
+          key: aosp-clang-r584948
           # Optional: restore keys if you want to update from previous versions
           # restore-keys: |
           #   aosp-clang-
@@ -24,7 +24,7 @@ jobs:
           sudo apt-get install --no-install-recommends -qq aria2
           mkdir -p workspace/clang
           
-          aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r574158.tar.gz"
+          aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r584948.tar.gz"
           
           tar -xf clang.tar.gz -C workspace/clang
           
