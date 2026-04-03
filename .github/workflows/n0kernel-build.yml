@@ -73,13 +73,13 @@ jobs:
 
     - name: Cache AOSP Clang
       id: cache-clang
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: workspace/clang
         key: aosp-clang-r574158
     
     - name: Cache ccache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.ccache
         key: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ github.run_id }}
