@@ -144,7 +144,7 @@ jobs:
             if [ -d "KernelSU" ]; then
               curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
             fi
-              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s v3.2.2-10-legacy
         else
             echo "Selecting KSU-Next (rifsxd)"
             if [ -d "KernelSU" ]; then
