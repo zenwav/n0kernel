@@ -230,27 +230,40 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
 static inline unsigned long apply_dvfs_headroom(unsigned long util, int cpu)
 {
-	unsigned long capacity = capacity_orig_of(cpu);
-	unsigned long delta, headroom, min_util;
+        unsigned long capacity = capacity_orig_of(cpu);
+        unsigned long delta, headroom, future, burst;
 
-	if (util >= capacity)
-		return util;
+        if (util >= capacity)
+                return util;
+
+        /* Cut-off dvfs headroom if util is under 6.25% of capacity */
+        if (util < (capacity >> 4))
+                return util;
+
         /*
-        * Quadratic taper the boosting at the top end as these are expensive
-        * and we don't need that much of a big headroom as we approach max
-        * capacity
-        */
-	delta = capacity - util;
-	headroom = ((delta * delta) >> 12);
+         * Quadratic taper the boosting at the top end as these are expensive
+         * and we don't need that much of a big headroom as we approach max
+         * capacity
+         */
+        delta = capacity - util;
+        headroom = (delta * delta) >> 12;
 
-	/* 10% of capacity threshold */
-	min_util = capacity / 10;
+        /*
+         * If util is rising, add a small extra headroom to get ahead of it.
+         *
+         * Look 1ms into the future; if util is still climbing, boost headroom
+         * slightly (by 12.5%) but cap the addition at 1/8th of remaining
+         * capacity so we don't over-react near the top end.
+         */
+        future = approximate_util_avg(util, 1000); /* 1 ms lookahead */
 
-	/* Suppress boosting below the threshold */
-	if (util < min_util)
-		headroom = (headroom * util * util) / (min_util * min_util);
+        if (future > util) {
+                burst = future - util;
+                burst += burst >> 3;
+                headroom += min(burst, delta >> 3);
+        }
 
-	return util + headroom;
+        return min(util + headroom, capacity);
 }
 
 unsigned long sugov_effective_cpu_perf(int cpu, unsigned long actual,
