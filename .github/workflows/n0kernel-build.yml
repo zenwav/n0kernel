@@ -78,7 +78,7 @@ jobs:
       uses: actions/cache@v5
       with:
         path: workspace/clang
-        key: aosp-clang-r563880c
+        key: aosp-clang-r547379
         
     - name: Cache ccache
       uses: actions/cache@v5
@@ -233,7 +233,7 @@ jobs:
       shell: bash
 
     - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         preserve_order: true
         files: |
