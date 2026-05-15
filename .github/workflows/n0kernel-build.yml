@@ -106,7 +106,7 @@ jobs:
     - name: Download AOSP Clang (if not cached)
       if: steps.cache-clang.outputs.cache-hit != 'true'
       run: |
-        aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r563880c.tar.gz"
+        aria2c -x 16 -k 1M -o clang.tar.gz "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r547379.tar.gz"
         mkdir -p clang
         tar -xf clang.tar.gz -C clang
         rm clang.tar.gz
