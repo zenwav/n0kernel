@@ -39,6 +39,7 @@ on:
         description: 'Choose the fork of KSU to use'
         options:
         - RKSU (rsuntk) 
+        - XXKSU (backslashxx)
         - KSU-Next (rifsxd)
         - MSKU (5ec1cff)
 env:
@@ -139,6 +140,12 @@ jobs:
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
             fi
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s main
+        elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "XXKSU (backslashxx)" ]]; then
+            echo "You selected XXKSU (backslashxx)"
+            if [ -d "KernelSU" ]; then
+              curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s -- --cleanup
+            fi
+              curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s master
         elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "RKSU (rsuntk)" ]]; then
             echo "You selected RKSU (rsuntk)"
             if [ -d "KernelSU" ]; then
