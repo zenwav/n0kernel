@@ -14,6 +14,10 @@ on:
         description: 'Kernel Tree Branch'
         required: true
         default: 'bpf-xxksu-susfs'
+      KBUILD_DATE:
+        description: 'Custom kernel build date for KBUILD_BUILD_TIMESTAMP (optional, e.g. "Fri May 22 01:00:00 UTC 2026")'
+        required: false
+        type: string  
       CODENAME:
         description: 'Phone Codename'
         default: 'alioth'
@@ -167,6 +171,10 @@ jobs:
         export SUBARCH="arm64"
         export KBUILD_BUILD_USER="Nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
+
+        if [ -n "${{ github.event.inputs.KBUILD_DATE }}" ]; then
+          export KBUILD_BUILD_TIMESTAMP="${{ github.event.inputs.KBUILD_DATE }}"
+        fi
 
         # Set up ccache environment
         export CCACHE_BASEDIR="${{ steps.kernel.outputs.kernel-folder }}"
