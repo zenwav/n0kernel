@@ -6404,9 +6404,6 @@ bad:
 	return error;
 }
 
-#ifdef CONFIG_KSU
-extern int ksu_hide_setprocattr(const char *name, void *value, size_t size);
-#endif
 static int selinux_setprocattr(const char *name, void *value, size_t size)
 {
 	struct task_security_struct *tsec;
@@ -6415,9 +6412,6 @@ static int selinux_setprocattr(const char *name, void *value, size_t size)
 	int error;
 	char *str = value;
 
-#ifdef CONFIG_KSU
-	ksu_hide_setprocattr(name, value, size);
-#endif
 	/*
 	 * Basic control over ability to set these attributes at all.
 	 */
