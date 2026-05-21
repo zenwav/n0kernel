@@ -13,7 +13,7 @@ on:
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
         required: true
-        default: 'bpf-rksu'
+        default: 'bpf-xxksu-susfs'
       CODENAME:
         description: 'Phone Codename'
         default: 'alioth'
@@ -41,9 +41,7 @@ on:
         - RKSU (rsuntk) 
         - XXKSU-SUSFS
         - KSU-Next (rifsxd)
-        - MSKU (5ec1cff)
-env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'       
+        - MSKU (5ec1cff)      
         
 jobs:
   build:
@@ -216,7 +214,7 @@ jobs:
           cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ -rv
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
         fi
-        name=n0kernel${{ fromJSON('["", "-BPF-RKSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
+        name=n0kernel${{ fromJSON('["", "-XXKSU-SUSFS"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
         mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
