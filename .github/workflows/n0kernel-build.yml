@@ -39,7 +39,7 @@ on:
         description: 'Choose the fork of KSU to use'
         options:
         - RKSU (rsuntk) 
-        - XXKSU (backslashxx)
+        - XXKSU-SUSFS
         - KSU-Next (rifsxd)
         - MSKU (5ec1cff)
 env:
@@ -140,12 +140,12 @@ jobs:
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s -- --cleanup
             fi
               curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/main/kernel/setup.sh" | bash -s main
-        elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "XXKSU (backslashxx)" ]]; then
-            echo "You selected XXKSU (backslashxx)"
+        elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "XXKSU-SUSFS" ]]; then
+            echo "You selected XXKSU-SUSFS"
             if [ -d "KernelSU" ]; then
-              curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s -- --cleanup
+              curl -LSs "https://raw.githubusercontent.com/zenwav/KernelSU-SUSFS/refs/heads/master/kernel/setup.sh" | bash -s -- --cleanup
             fi
-              curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/master/kernel/setup.sh" | bash -s master
+              curl -LSs "https://raw.githubusercontent.com/zenwav/KernelSU-SUSFS/refs/heads/master/kernel/setup.sh" | bash -s master
         elif [[ "${{ github.event.inputs.WHICH_KSU }}" == "RKSU (rsuntk)" ]]; then
             echo "You selected RKSU (rsuntk)"
             if [ -d "KernelSU" ]; then
