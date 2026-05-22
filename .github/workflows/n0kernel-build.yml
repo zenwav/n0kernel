@@ -13,7 +13,11 @@ on:
       KERNEL_TREE_BRANCH:
         description: 'Kernel Tree Branch'
         required: true
-        default: 'staging'
+        default: 'no-ksu'
+      KBUILD_DATE:
+        description: 'Custom kernel build date for KBUILD_BUILD_TIMESTAMP (optional, e.g. "Fri May 22 01:00:00 UTC 2026")'
+        required: false
+        type: string    
       CODENAME:
         description: 'Phone Codename'
         default: 'alioth'
@@ -167,6 +171,10 @@ jobs:
         export KBUILD_BUILD_USER="Nehal"
         export KBUILD_BUILD_HOST="GitHub Actions"
 
+        if [ -n "${{ github.event.inputs.KBUILD_DATE }}" ]; then
+          export KBUILD_BUILD_TIMESTAMP="${{ github.event.inputs.KBUILD_DATE }}"
+        fi
+
         # Set up ccache environment
         export CCACHE_BASEDIR="${{ steps.kernel.outputs.kernel-folder }}"
         export CCACHE_COMPILERCHECK=content
@@ -213,7 +221,7 @@ jobs:
           cp -f out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ -rv
           test -f out/arch/arm64/boot/dtbo.img && cp -v out/arch/arm64/boot/dtbo.img AnyKernel3/
         fi
-        name=n0kernel${{ fromJSON('["", "-NOKSU"]')[fromJSON(github.event.inputs.ENABLE_KERNELSU)] }}-v${{ github.run_number }}.zip
+        name=n0kernel-NOKSU-v${{ github.run_number }}.zip
         cd AnyKernel3
         zip -r9 $name * -x README $name
         mv $name ${{ steps.kernel.outputs.kernel-folder }}/out/arch/arm64/boot/
